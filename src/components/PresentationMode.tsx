@@ -3,7 +3,7 @@ import {
   BookOpen, Users, Download, Plus, Trash2, ArrowLeft, 
   Laptop, TableProperties, Clipboard, Smartphone, Maximize2
 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-client';
+import { createClient } from "@supabase/supabase-js";
 
 // Conexão direta com as chaves que você já configurou na Vercel
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
