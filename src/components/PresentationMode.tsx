@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { createClient } from "@supabase/supabase-js";
 
-// Inicializa o cliente do Supabase usando as variáveis do seu arquivo .env
+// Inicializa o cliente do Supabase usando as variáveis de ambiente
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -61,7 +61,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     return urlParams.get('mode') === 'apresentacao_aluno' ? 'student' : 'presenter';
   });
 
-  // Estados locais simulando o painel
   const [activeToken, setActiveToken] = useState<string>('LIVE-ON95');
   const [timeLeftMs, setTimeLeftMs] = useState<number>(10000);
   const [students, setStudents] = useState<PresentationStudent[]>([]);
@@ -94,10 +93,11 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     return `${origin}?mode=apresentacao_aluno`;
   };
 
-  // Carrega dados iniciais do Supabase se as tabelas existirem, ou usa o LocalStorage/Mock
+  // Sincronização em tempo real direta com as tabelas do Supabase
   useEffect(() => {
-    const loadSupabaseData = async () => {
-      if (!supabaseUrl) return;
+    if (!supabaseUrl) return;
+
+    const loadData = async () => {
       try {
         const { data: attData } = await supabase.from('attendances').select('*').order('scannedAt', { ascending: false });
         if (attData) setAttendances(attData);
@@ -105,13 +105,16 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
         const { data: stdData } = await supabase.from('students').select('*');
         if (stdData) setStudents(stdData);
       } catch (err) {
-        console.warn("Tabelas do Supabase não encontradas. Usando modo de demonstração local.");
+        console.warn("Tabelas do Supabase indisponíveis. Usando simulação local.");
       }
     };
-    loadSupabaseData();
+
+    loadData();
+    const interval = setInterval(loadData, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Timer rotativo do Token de 10 segundos
+  // Cronómetro rotativo do Token (10 segundos)
   useEffect(() => {
     const tokens = ['LIVE-ON95', 'TECH-77X', 'CODE-404', 'DATA-99B', 'VITE-2026'];
     const interval = setInterval(() => {
@@ -133,7 +136,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  // Cadastro do Aluno (Envia para o Supabase ou Mock)
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim() || !studentCourse.trim()) {
@@ -151,16 +153,14 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     };
 
     try {
-      const { error } = await supabase.from('students').insert([{
+      await supabase.from('students').insert([{
         id: mockStudent.id,
         name: mockStudent.name,
         course: mockStudent.course,
         semester: mockStudent.semester
       }]);
-
-      if (error) throw error;
     } catch (err) {
-      console.log("Salvando aluno localmente (Modo de Demonstração)");
+      console.log("Modo de simulação local ativo");
     }
 
     setStudents(prev => [mockStudent, ...prev]);
@@ -169,7 +169,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     setIsLoading(false);
   };
 
-  // Registro de presença pelo Token
   const handleScanOrSubmitCode = async (codeToSubmit: string) => {
     if (!currentStudent) return;
     if (!codeToSubmit.trim()) {
@@ -202,7 +201,7 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
         token_used: newAttendance.tokenUsed
       }]);
     } catch (err) {
-      console.log("Registrando presença localmente (Modo de Demonstração)");
+      console.log("Presença registada localmente");
     }
 
     setAttendances(prev => [newAttendance, ...prev]);
@@ -276,7 +275,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
 
   return (
     <div className="w-full min-h-screen bg-[#f3f7fd] flex flex-col">
-      {/* HEADER BANNER */}
       <header className="bg-white border-b border-blue-100 py-3.5 px-6 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -306,7 +304,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
         </div>
       </header>
 
-      {/* POPUP NOTIFICATION */}
       {activeNotification && role === 'presenter' && (
         <div className="fixed top-20 right-6 z-50 bg-[#091e3a] text-white p-4 rounded-2xl shadow-2xl border border-blue-500/30 flex items-center gap-3 max-w-sm">
           <span>✨</span>
@@ -314,7 +311,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
         </div>
       )}
 
-      {/* RENDER PANEL */}
       {role === 'presenter' ? (
         <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="col-span-1 lg:col-span-2 space-y-6">
@@ -323,7 +319,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
               <p className="text-xs text-slate-600">Projete esta tela. Peça para usarem o QR Code 1 para entrar e validarem com o QR Code 2.</p>
             </div>
 
-            {/* QR 1 */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4">
               <h4 className="text-xs font-black text-slate-800">Passo 1: Entrar no App</h4>
               <img
@@ -338,7 +333,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
               </div>
             </div>
 
-            {/* QR 2 */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4 relative">
               <h4 className="text-xs font-black text-slate-800">Passo 2: Registro de Presença</h4>
               <div className="bg-[#f0fdf4] p-4 rounded-2xl border-2 border-emerald-500/30 flex flex-col items-center w-full max-w-[200px]">
@@ -356,7 +350,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
             </div>
           </div>
 
-          {/* PLANILHA */}
           <div className="col-span-1 lg:col-span-3 flex flex-col bg-white rounded-3xl border shadow-md p-6 min-h-[500px]">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-5 mb-5">
               <div className="flex items-center gap-3">
@@ -418,7 +411,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
           </div>
         </main>
       ) : (
-        /* VISTA ALUNO (CELULAR) */
         <main className="flex-1 max-w-lg mx-auto w-full p-4 flex flex-col justify-center">
           {!currentStudent ? (
             <div className="bg-white rounded-3xl border shadow-lg p-6 space-y-4">
