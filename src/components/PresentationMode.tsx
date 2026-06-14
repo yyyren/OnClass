@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { createClient } from "@supabase/supabase-js";
+import { QRCodeSVG } from 'qrcode.react';
 
 // Inicializa o cliente do Supabase usando as variáveis de ambiente
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -86,12 +87,22 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
   });
 
   const [copiedLink, setCopiedLink] = useState(false);
-  const [expandedQr, setExpandedQr] = useState<'enrollment' | 'token' | null>(null);
 
   const getStudentShareUrl = () => {
     const origin = window.location.origin + window.location.pathname;
     return `${origin}?mode=apresentacao_aluno`;
   };
+
+  // Captura o token automático vindo do QR Code para o aluno
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenParam = urlParams.get('token');
+      if (tokenParam) {
+        setManualCode(tokenParam.toUpperCase());
+      }
+    } catch (e) {}
+  }, [role]);
 
   // Sincronização em tempo real direta com as tabelas do Supabase
   useEffect(() => {
@@ -271,8 +282,6 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
     document.body.removeChild(link);
   };
 
-  const strokeDashoffset = (timeLeftMs / 10000) * 283;
-
   return (
     <div className="w-full min-h-screen bg-[#f3f7fd] flex flex-col">
       <header className="bg-white border-b border-blue-100 py-3.5 px-6 shadow-sm sticky top-0 z-40">
@@ -321,10 +330,12 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
 
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4">
               <h4 className="text-xs font-black text-slate-800">Passo 1: Entrar no App</h4>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(getStudentShareUrl())}`}
-                alt="QR Code" className="w-36 h-36 border p-1 bg-white rounded-lg"
-              />
+              <div className="bg-white p-2 rounded-xl border shadow-sm">
+                <QRCodeSVG 
+                  value={getStudentShareUrl()}
+                  size={144}
+                />
+              </div>
               <div className="flex bg-[#f1f5f9] border rounded-lg p-2 items-center justify-between w-full">
                 <span className="text-[9px] text-slate-600 truncate text-left flex-1">{getStudentShareUrl()}</span>
                 <button onClick={handleCopyLink} className="bg-[#0066ff] text-white text-[9px] px-2.5 py-1 rounded-md ml-2">
@@ -336,10 +347,12 @@ export default function PresentationMode({ onBack, initialOverrideMode }: Presen
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4 relative">
               <h4 className="text-xs font-black text-slate-800">Passo 2: Registro de Presença</h4>
               <div className="bg-[#f0fdf4] p-4 rounded-2xl border-2 border-emerald-500/30 flex flex-col items-center w-full max-w-[200px]">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(activeToken)}`}
-                  alt="Token" className="w-36 h-36 border p-1 bg-white rounded-lg"
-                />
+                <div className="bg-white p-2 rounded-xl border shadow-sm mb-2">
+                  <QRCodeSVG 
+                    value={getStudentShareUrl() + '&token=' + activeToken}
+                    size={144}
+                  />
+                </div>
                 <div className="mt-2 bg-[#10b981] text-white px-4 py-1 rounded-xl font-mono text-sm font-bold tracking-widest">
                   {activeToken}
                 </div>
